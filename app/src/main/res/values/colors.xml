@@ -1,13 +1,9 @@
 <resources>
-    <color name="bg">#090909</color>
-    <color name="surface">#151515</color>
-    <color name="surface2">#1E1E1E</color>
-    <color name="primary">#E50914</color>
-    <color name="primary_dark">#A90009</color>
-    <color name="danger">#B00020</color>
-    <color name="success">#22C55E</color>
-    <color name="warning">#F59E0B</color>
+    <color name="bg">#0A0708</color>
+    <color name="card">#1E1012</color>
+    <color name="card2">#301619</color>
+    <color name="accent">#E81923</color>
+    <color name="accent_dark">#A90D16</color>
     <color name="text">#FFFFFF</color>
-    <color name="muted">#B7B7B7</color>
-    <color name="line">#343434</color>
+    <color name="muted">#C8B8BA</color>
 </resources>

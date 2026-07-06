@@ -12,49 +12,55 @@ import java.util.Calendar;
 public final class AlarmScheduler {
     private AlarmScheduler() {}
 
-    public static final String[][] DEFAULTS = new String[][]{
-            {"800", "8", "0", "اصحى يا بطل 💪", "ابدأ يومك بمياه وفطارك في موعده", "wake"},
-            {"830", "8", "30", "وقت الفطار 🍳", "3 بيضات + فول + عيش مصري بلدي + موزة", "meal"},
-            {"1100", "11", "0", "وجبة قبل التمرين 🥣", "شوفان + لبن + موزة + عسل", "meal"},
-            {"1230", "12", "30", "استعد للجيم 💧", "اشرب مياه وجهز ملابسك", "gym"},
-            {"1300", "13", "0", "وقت التمرين 🏋️", "افتح GYM وشوف تمرين اليوم", "gym"},
-            {"1415", "14", "15", "الكرياتين 🧪", "خد 5 جرام كرياتين واشرب مياه", "supplement"},
-            {"1500", "15", "0", "وقت الغدا 🍗", "أرز أو مكرونة + بروتين + سلطة", "meal"},
-            {"1800", "18", "0", "سناك اقتصادي 🥛", "لبن + موزة + فول سوداني", "meal"},
-            {"2100", "21", "0", "وقت العشا 🍳", "بيض + فول أو جبنة قريش + عيش مصري", "meal"},
-            {"2330", "23", "30", "وجبة قبل النوم", "لبن أو زبادي حسب المتاح", "meal"},
-            {"0", "0", "0", "وقت النوم 😴", "نام 7 إلى 9 ساعات عشان تبني عضل", "sleep"}
-    };
-
     public static void scheduleAll(Context context) {
-        for (String[] item : DEFAULTS) schedule(context, Integer.parseInt(item[0]), Integer.parseInt(item[1]), Integer.parseInt(item[2]), item[3], item[4], item[5]);
-        scheduleMotivation(context);
+        for (String[] item : AppData.SCHEDULE) {
+            schedule(context, Integer.parseInt(item[0]), Integer.parseInt(item[1]), Integer.parseInt(item[2]), item[3], item[4], item[5]);
+        }
+        scheduleMotivation(context, 7001, 10, 15, "ركز على يوم واحد فقط 💪", "كل وجبة وكل تمرين خطوة صغيرة ناحية جسم أقوى.");
+        scheduleMotivation(context, 7002, 17, 0, "أنت قادر تكمل 🔥", "الاستمرار أهم من الكمال. حافظ على خطتك اليوم.");
     }
 
     public static void schedule(Context context, int id, int hour, int minute, String title, String body, String type) {
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !am.canScheduleExactAlarms()) return;
+        long when = nextTime(hour, minute);
+        Intent intent = new Intent(context, AlarmReceiver.class)
+                .putExtra("id", id).putExtra("hour", hour).putExtra("minute", minute)
+                .putExtra("title", title).putExtra("body", body).putExtra("type", type);
+        PendingIntent pi = PendingIntent.getBroadcast(context, id, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        am.setAlarmClock(new AlarmManager.AlarmClockInfo(when, pi), pi);
+    }
+
+    public static void scheduleSnooze(Context context, int id, int minutes, String title, String body, String type) {
+        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        long when = System.currentTimeMillis() + minutes * 60_000L;
+        Intent intent = new Intent(context, AlarmReceiver.class)
+                .putExtra("id", id).putExtra("hour", -1).putExtra("minute", -1)
+                .putExtra("title", title).putExtra("body", body).putExtra("type", type).putExtra("snooze", true);
+        PendingIntent pi = PendingIntent.getBroadcast(context, id + 90000, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !am.canScheduleExactAlarms()) return;
+        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, when, pi);
+    }
+
+    private static void scheduleMotivation(Context context, int id, int hour, int minute, String title, String body) {
+        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        Intent intent = new Intent(context, NotificationReceiver.class).putExtra("id", id).putExtra("hour", hour).putExtra("minute", minute).putExtra("title", title).putExtra("body", body);
+        PendingIntent pi = PendingIntent.getBroadcast(context, id, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        long when = nextTime(hour, minute);
+        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, when, pi);
+    }
+
+    public static long nextTime(int hour, int minute) {
         Calendar c = Calendar.getInstance();
         c.set(Calendar.HOUR_OF_DAY, hour); c.set(Calendar.MINUTE, minute); c.set(Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0);
         if (c.getTimeInMillis() <= System.currentTimeMillis()) c.add(Calendar.DAY_OF_YEAR, 1);
-        Intent intent = new Intent(context, AlarmReceiver.class).putExtra("id", id).putExtra("hour", hour).putExtra("minute", minute).putExtra("title", title).putExtra("body", body).putExtra("type", type);
-        PendingIntent pi = PendingIntent.getBroadcast(context, id, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        am.setAlarmClock(new AlarmManager.AlarmClockInfo(c.getTimeInMillis(), pi), pi);
-    }
-
-    public static void scheduleMotivation(Context context) {
-        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        Calendar c = Calendar.getInstance();
-        c.set(Calendar.HOUR_OF_DAY, 17); c.set(Calendar.MINUTE, 15); c.set(Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0);
-        if (c.getTimeInMillis() <= System.currentTimeMillis()) c.add(Calendar.DAY_OF_YEAR, 1);
-        Intent i = new Intent(context, MotivationReceiver.class);
-        PendingIntent pi = PendingIntent.getBroadcast(context, 7000, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        if (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, c.getTimeInMillis(), pi);
-        else am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, c.getTimeInMillis(), pi);
+        return c.getTimeInMillis();
     }
 
     public static Intent exactAlarmSettings(Context context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).setData(android.net.Uri.parse("package:" + context.getPackageName()));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).setData(android.net.Uri.parse("package:" + context.getPackageName()));
+        }
         return null;
     }
 }
